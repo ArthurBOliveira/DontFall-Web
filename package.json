@@ -1,0 +1,31 @@
+{
+  "name": "dontfall-web",
+  "version": "1.0.0",
+  "description": "Website for Creating account and Playing Dont Fall on the navigator Edit",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ArthurBOliveira/DontFall-Web.git"
+  },
+  "keywords": [
+    "Game"
+  ],
+  "author": "Arthur B de Oliveira",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/ArthurBOliveira/DontFall-Web/issues"
+  },
+  "homepage": "https://github.com/ArthurBOliveira/DontFall-Web#readme",
+  "dependencies": {
+    "express": "^4.16.2",
+    "http": "0.0.0",
+    "mongoose": "^4.12.4",
+    "passport": "^0.4.0",
+    "passport-facebook": "^2.1.1",
+    "path": "^0.12.7",
+    "socket.io": "^2.0.3"
+  }
+}
