@@ -28,6 +28,6 @@ app.use(passport.session());
 
 require('./server/routes.js')(app, passport);
 
-server.listen(port, () => {
+app.listen(port, () => {
     console.log('On port: ' + port);
 });
