@@ -24,8 +24,9 @@ module.exports = (app, passport) => {
     });
 
   app.get('/profile',
-    // require('connect-ensure-login').ensureLoggedIn(),
+    require('connect-ensure-login').ensureLoggedIn(),
     function (req, res) {
+      console.log(user);
       res.render('profile', {
         user: req.user
       });
