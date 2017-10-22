@@ -57,6 +57,7 @@ app.get('/login/facebook/return',
 app.get('/profile',
     require('connect-ensure-login').ensureLoggedIn(),
     function (req, res) {
+        console.log('All data from User: ', user);
         res.render('profile', {
             user: req.user
         });
