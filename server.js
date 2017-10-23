@@ -1,70 +1,32 @@
-var express = require('express');
-var passport = require('passport');
-var Strategy = require('passport-facebook').Strategy;
+require('./config/config');
 
-var {passport} = require('./config/passport.js');
+const express = require('express');
+const passport = require('passport');
+const flash = require('connect-flash');
 
-// Create a new Express application.
-var app = express();
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
+const bodyParser = require('body-parser');
+const session = require('express-session');
 
-// Configure view engine to render EJS templates.
-app.set('views', __dirname + '/views');
-app.set('view engine', 'ejs');
+let {mongoose} = require('./server/db/mongoose');
 
-// Use application-level middleware for common functionality, including
-// logging, parsing, and session handling.
-app.use(require('morgan')('combined'));
-app.use(require('cookie-parser')());
-app.use(require('body-parser').urlencoded({
-    extended: true
-}));
-app.use(require('express-session')({
-    secret: 'keyboard cat',
-    resave: true,
-    saveUninitialized: true
-}));
+let app = express();
+let port = process.env.PORT;
 
-// Initialize Passport and restore authentication state, if any, from the
-// session.
+app.use(morgan('dev')); // log every request to the console
+app.use(cookieParser()); // read cookies (needed for auth)
+app.use(bodyParser()); // get information from html forms
+app.use(session({ secret: 'node-account-manager-session-secret' })); // session secret
 app.use(passport.initialize());
-app.use(passport.session());
+app.use(passport.session()); // persistent login sessions
+app.use(flash()); // use connect-flash for flash messages stored in session
 
+app.set('view engine', 'ejs'); // set up ejs for templating
 
-// Define routes.
-app.get('/',
-    function (req, res) {
-        res.render('home', {
-            user: req.user
-        });
-    });
-
-app.get('/login',
-    function (req, res) {
-        res.render('login');
-    });
-
-app.get('/login/facebook',
-    passport.authenticate('facebook'));
-
-app.get('/login/facebook/return',
-    passport.authenticate('facebook', {
-        failureRedirect: '/login'
-    }),
-    function (req, res) {
-        res.redirect('/');
-    });
-
-app.get('/profile',
-    require('connect-ensure-login').ensureLoggedIn(),
-    function (req, res) {
-        console.log('All data from User: ', req.user);
-        res.render('profile', {
-            user: req.user
-        });
-    });
-
-const port = process.env.PORT || 3000;
+require('./server/routes.js')(app, passport);
+require('./config/passport')(passport); // pass passport for configuration
 
 app.listen(port, () => {
-    console.log('On port: ' + port);
+    console.log(`Started up at port ${port}`);
 });

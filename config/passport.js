@@ -1,45 +1,102 @@
-var passport = require('passport');
-var Strategy = require('passport-facebook').Strategy;
+// load all the things we need
+let LocalStrategy = require('passport-local').Strategy;
 
-// Configure the Facebook strategy for use by Passport.
-//
-// OAuth 2.0-based strategies require a `verify` function which receives the
-// credential (`accessToken`) for accessing the Facebook API on the user's
-// behalf, along with the user's profile.  The function must invoke `cb`
-// with a user object, which will be set at `req.user` in route handlers after
-// authentication.
-passport.use(new Strategy({
-        clientID: '159340584654918',
-        clientSecret: '5b858c6bbe84c21e114f8abe62480a7d',
-        callbackURL: 'https://dontfall.herokuapp.com/login/facebook/return',
-        profileFields: ['id', 'displayName', 'photos', 'email']        
-    },
-    function (accessToken, refreshToken, profile, cb) {
-        // In this example, the user's Facebook profile is supplied as the user
-        // record.  In a production-quality application, the Facebook profile should
-        // be associated with a user record in the application's database, which
-        // allows for account linking and authentication with other identity
-        // providers.
-        return cb(null, profile);
-    }));
+// load up the user model
+let User = require('../server/models/user');
 
-// Configure Passport authenticated session persistence.
-//
-// In order to restore authentication state across HTTP requests, Passport needs
-// to serialize users into and deserialize users out of the session.  In a
-// production-quality application, this would typically be as simple as
-// supplying the user ID when serializing, and querying the user record by ID
-// from the database when deserializing.  However, due to the fact that this
-// example does not have a database, the complete Facebook profile is serialized
-// and deserialized.
-passport.serializeUser(function (user, cb) {
-    cb(null, user);
-});
+// expose this function to our app using module.exports
+module.exports = (passport) => {
 
-passport.deserializeUser(function (obj, cb) {
-    cb(null, obj);
-});
+    // --> passport session setup
+    // required for persistent login sessions
+    // passport needs ability to serialize and unserialize users out of session
 
-module.exports = {
-    passport
-}
+    // used to serialize the user for the session
+    passport.serializeUser((user, done) => {
+        done(null, user.id);
+    });
+
+    // used to deserialize the user
+    passport.deserializeUser((id, done) => {
+        User.findById(id, (err, user) => {
+            done(err, user);
+        });
+    });
+
+    // --> local signup
+    passport.use('local-signup', new LocalStrategy({
+            // by default, local strategy uses username and password, we will override with email
+            usernameField: 'email',
+            passwordField: 'password',
+            passReqToCallback: true // allows us to pass back the entire request to the callback
+        },
+        (req, email, password, done) => {
+
+            // asynchronous
+            // User.findOne wont fire unless data is sent back
+            process.nextTick(() => {
+
+                // find a user whose email is the same as the forms email
+                // we are checking to see if the user trying to login already exists
+                User.findOne({
+                    'email': email
+                }, (err, user) => {
+                    // if there are any errors, return the error
+                    if (err)
+                        return done(err);
+
+                    // check to see if theres already a user with that email
+                    if (user) {
+                        return done(null, false, req.flash('signupMessage', 'That email is already taken.'));
+                    } else {
+
+                        // if there is no user with that email
+                        // create the user
+                        let newUser = new User();
+
+                        // set the user's local credentials
+                        newUser.email = email;
+                        newUser.password = newUser.generateHash(password);
+
+                        // save the user
+                        newUser.save(function (err) {
+                            if (err)
+                                throw err;
+                            return done(null, newUser);
+                        });
+                    }
+                });
+            });
+        }));
+
+    // --> local signup
+    passport.use('local-login', new LocalStrategy({
+            // by default, local strategy uses username and password, we will override with email
+            usernameField: 'email',
+            passwordField: 'password',
+            passReqToCallback: true // allows us to pass back the entire request to the callback
+        },
+        (req, email, password, done) => { // callback with email and password from our form
+
+            // find a user whose email is the same as the forms email
+            // we are checking to see if the user trying to login already exists
+            User.findOne({
+                'email': email
+            }, (err, user) => {
+                // if there are any errors, return the error before anything else
+                if (err)
+                    return done(err);
+
+                // if no user is found, return the message
+                if (!user)
+                    return done(null, false, req.flash('loginMessage', 'No user found.')); // req.flash is the way to set flashdata using connect-flash
+
+                // if the user is found but the password is wrong
+                if (!user.validPassword(password))
+                    return done(null, false, req.flash('loginMessage', 'Oops! Wrong password.')); // create the loginMessage and save it to session as flashdata
+
+                // all is well, return successful user
+                return done(null, user);
+            });
+        }));
+};
